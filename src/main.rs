@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => panic!("Error reading config file: {}", e),
     };
 
-    let config: Config = match serde_yaml::from_str(&mut contents) {
+    let config: Config = match serde_yaml::from_str(&contents) {
         Ok(config) => config,
         Err(e) => panic!("Error parsing config file: {}", e),
     };
