@@ -7,6 +7,7 @@ use clap::Parser;
 use http_body_util::Full;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
+use hyper::{Method, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
 use tokio::net::TcpListener;
@@ -53,15 +54,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
         tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new().serve_connection(io, service_fn(service)).await {
+            if let Err(err) = http1::Builder::new()
+                .serve_connection(io, service_fn(service))
+                .await
+            {
                 eprintln!("Failed to serve connection: {}", err);
             }
         });
     }
 }
 async fn service(
-    _req: hyper::Request<hyper::body::Incoming>,
-) -> Result<hyper::Response<Full<Bytes>>, hyper::Error> {
-    let body = Full::new(Bytes::from("Hello, World!"));
-    Ok(hyper::Response::new(body))
+    req: hyper::Request<hyper::body::Incoming>,
+) -> hyper::Result<hyper::Response<Full<Bytes>>> {
+    let method = req.method();
+    let path = req.uri().path();
+
+    match (method, path) {
+        (&Method::GET, "/") => simple_file_send("index.html").await,
+        _ => Ok(not_found()),
+    }
+}
+
+async fn simple_file_send(filename: &str) -> hyper::Result<hyper::Response<Full<Bytes>>> {
+    if let Ok(contents) = tokio::fs::read(filename).await {
+        let body = contents.into();
+        return Ok(Response::new(Full::new(body)));
+    }
+    Ok(not_found())
+}
+
+fn not_found() -> hyper::Response<Full<Bytes>> {
+    let body = Bytes::from("Not Found");
+    hyper::Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .body(Full::new(body))
+        .unwrap()
 }
