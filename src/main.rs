@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::net::SocketAddr;
+use std::path::Path;
 
 use bytes::Bytes;
 use clap::Parser;
@@ -16,6 +17,7 @@ use tokio::net::TcpListener;
 struct Args {
     #[arg(short, long, default_value = "madoka.conf.yaml")]
     config: String,
+    root: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,6 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => panic!("Error parsing config file: {}", e),
     };
 
+    let root_path_buf = Path::new(&args.root).to_path_buf();
+
     let port = config.port;
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
@@ -53,18 +57,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
+        let root_path = root_path_buf.clone();
+        let service = service_fn(move |req| {
+            let root_path = root_path.clone();
+            async move { router(req, &root_path).await }
+        });
         tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service_fn(service))
-                .await
-            {
+            if let Err(err) = http1::Builder::new().serve_connection(io, service).await {
                 eprintln!("Failed to serve connection: {}", err);
             }
         });
     }
 }
-async fn service(
+async fn router(
     req: hyper::Request<hyper::body::Incoming>,
+    _root_path: &Path,
 ) -> hyper::Result<hyper::Response<Full<Bytes>>> {
     let method = req.method();
     let path = req.uri().path();
