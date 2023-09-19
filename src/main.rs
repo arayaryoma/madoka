@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::net::SocketAddr;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use bytes::Bytes;
 use clap::Parser;
@@ -71,23 +71,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 async fn router(
     req: hyper::Request<hyper::body::Incoming>,
-    _root_path: &Path,
+    root_path: &Path,
 ) -> hyper::Result<hyper::Response<Full<Bytes>>> {
     let method = req.method();
-    let path = req.uri().path();
+    let path_str = req.uri().path();
+    let path = Path::new(path_str);
 
-    match (method, path) {
-        (&Method::GET, "/") => simple_file_send("index.html").await,
+    let full_path = resolve_file_path(root_path, path);
+
+    match method {
+        &Method::GET => simple_file_send(full_path.as_path()).await,
         _ => Ok(not_found()),
     }
 }
 
-async fn simple_file_send(filename: &str) -> hyper::Result<hyper::Response<Full<Bytes>>> {
-    if let Ok(contents) = tokio::fs::read(filename).await {
-        let body = contents.into();
-        return Ok(Response::new(Full::new(body)));
-    }
-    Ok(not_found())
+async fn simple_file_send(file_path: &Path) -> hyper::Result<hyper::Response<Full<Bytes>>> {
+    let file_data = match resolve_file_data(file_path).await {
+        Ok(file_data) => file_data,
+        Err(_) => return Ok(not_found()),
+    };
+
+    let builder = Response::builder()
+        .header("content-type", file_data.mime_type)
+        .header("content-length", file_data.content_length)
+        .status(StatusCode::OK)
+        .body(Full::new(Bytes::from(file_data.content)))
+        .unwrap();
+
+    Ok(builder)
 }
 
 fn not_found() -> hyper::Response<Full<Bytes>> {
@@ -96,4 +107,45 @@ fn not_found() -> hyper::Response<Full<Bytes>> {
         .status(StatusCode::NOT_FOUND)
         .body(Full::new(body))
         .unwrap()
+}
+
+fn internal_server_error() -> hyper::Response<Full<Bytes>> {
+    let body = Bytes::from("Internal Server Error");
+    hyper::Response::builder()
+        .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .body(Full::new(body))
+        .unwrap()
+}
+
+struct ResolvedFileData {
+    content: Vec<u8>,
+    mime_type: String,
+    content_length: usize,
+}
+
+async fn resolve_file_data(path: &Path) -> Result<ResolvedFileData, std::io::Error> {
+    let mime_type = mime_guess::from_path(path)
+        .first_or_octet_stream()
+        .to_string();
+
+    let mut file = File::open(path)?;
+    let mut content = Vec::new();
+    file.read_to_end(&mut content)?;
+
+    let content_length = content.len();
+
+    Ok(ResolvedFileData {
+        content,
+        mime_type,
+        content_length,
+    })
+}
+
+fn resolve_file_path(root_path: &Path, relative_path: &Path) -> PathBuf {
+    let mut full_path = root_path.to_path_buf();
+    full_path.push(relative_path);
+    if full_path.is_dir() {
+        full_path.push("index.html");
+    }
+    full_path
 }
