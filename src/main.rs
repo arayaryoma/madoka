@@ -49,7 +49,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => panic!("Error parsing config file: {}", e),
     };
 
-    let root_path_buf = Path::new(&config.root).to_path_buf();
+    let configured_root_path = if &config.root == "." || &config.root == "" {
+        std::env::current_dir().unwrap()
+    } else {
+        Path::new(&config.root).to_path_buf()
+    };
 
     let port = config.port;
 
@@ -60,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
-        let root_path = root_path_buf.clone();
+        let root_path = configured_root_path.clone();
         let service = service_fn(move |req| {
             let root_path = root_path.clone();
             async move { router(req, &root_path).await }
@@ -77,7 +81,10 @@ async fn router(
     root_path: &Path,
 ) -> hyper::Result<hyper::Response<Full<Bytes>>> {
     let method = req.method();
-    let path_str = req.uri().path();
+    let mut path_str = req.uri().path();
+    if path_str == "/" {
+        path_str = "index.html";
+    }
     let path = Path::new(path_str);
 
     let full_path = resolve_file_path(root_path, path);
@@ -91,7 +98,10 @@ async fn router(
 async fn simple_file_send(file_path: &Path) -> hyper::Result<hyper::Response<Full<Bytes>>> {
     let file_data = match resolve_file_data(file_path).await {
         Ok(file_data) => file_data,
-        Err(_) => return Ok(not_found()),
+        Err(e) => {
+            error!("Error reading file: {}", e);
+            return Ok(not_found());
+        }
     };
 
     let builder = Response::builder()
@@ -145,8 +155,9 @@ async fn resolve_file_data(path: &Path) -> Result<ResolvedFileData, std::io::Err
 }
 
 fn resolve_file_path(root_path: &Path, relative_path: &Path) -> PathBuf {
+    let canonicalized_relative_path = relative_path.strip_prefix("/").unwrap_or(relative_path);
     let mut full_path = root_path.to_path_buf();
-    full_path.push(relative_path);
+    full_path.push(canonicalized_relative_path);
     if full_path.is_dir() {
         full_path.push("index.html");
     }
