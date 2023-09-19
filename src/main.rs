@@ -17,12 +17,12 @@ use tokio::net::TcpListener;
 struct Args {
     #[arg(short, long, default_value = "madoka.conf.yaml")]
     config: String,
-    root: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct Config {
     port: u16,
+    root: String,
 }
 
 #[tokio::main]
@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => panic!("Error parsing config file: {}", e),
     };
 
-    let root_path_buf = Path::new(&args.root).to_path_buf();
+    let root_path_buf = Path::new(&config.root).to_path_buf();
 
     let port = config.port;
 
