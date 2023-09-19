@@ -10,6 +10,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Response, StatusCode};
 use hyper_util::rt::TokioIo;
+use log::{debug, error};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 
@@ -29,6 +30,8 @@ struct Config {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let config_path = args.config;
+
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
 
     let mut file = match File::open(config_path) {
         Ok(file) => file,
@@ -147,5 +150,6 @@ fn resolve_file_path(root_path: &Path, relative_path: &Path) -> PathBuf {
     if full_path.is_dir() {
         full_path.push("index.html");
     }
+    debug!("full_path after modify: {}", full_path.display());
     full_path
 }
