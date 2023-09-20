@@ -14,6 +14,9 @@ use log::{debug, error};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 
+mod hyper_response_util;
+use hyper_response_util::not_found;
+
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(short, long, default_value = "madoka.conf.yaml")]
@@ -112,22 +115,6 @@ async fn simple_file_send(file_path: &Path) -> hyper::Result<hyper::Response<Ful
         .unwrap();
 
     Ok(builder)
-}
-
-fn not_found() -> hyper::Response<Full<Bytes>> {
-    let body = Bytes::from("Not Found");
-    hyper::Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .body(Full::new(body))
-        .unwrap()
-}
-
-fn internal_server_error() -> hyper::Response<Full<Bytes>> {
-    let body = Bytes::from("Internal Server Error");
-    hyper::Response::builder()
-        .status(StatusCode::INTERNAL_SERVER_ERROR)
-        .body(Full::new(body))
-        .unwrap()
 }
 
 struct ResolvedFileData {
