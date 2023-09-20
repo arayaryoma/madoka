@@ -10,6 +10,7 @@ pub fn not_found() -> hyper::Response<Full<Bytes>> {
         .unwrap()
 }
 
+#[allow(dead_code)]
 pub fn internal_server_error() -> hyper::Response<Full<Bytes>> {
     let body = Bytes::from("Internal Server Error");
     hyper::Response::builder()
