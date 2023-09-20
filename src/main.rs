@@ -11,22 +11,18 @@ use hyper::service::service_fn;
 use hyper::{Method, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use log::{debug, error};
-use serde::Deserialize;
 use tokio::net::TcpListener;
 
 mod hyper_response_util;
 use hyper_response_util::not_found;
 
+mod config;
+use config::read_config_from_file;
+
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(short, long, default_value = "madoka.conf.yaml")]
     config: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct Config {
-    port: u16,
-    root: String,
 }
 
 #[tokio::main]
@@ -36,23 +32,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
 
-    let mut file = match File::open(config_path) {
-        Ok(file) => file,
-        Err(e) => panic!("Error opening config file: {}", e),
-    };
+    let config = read_config_from_file(config_path.as_str())?;
 
-    let mut contents = String::new();
-    match file.read_to_string(&mut contents) {
-        Ok(_) => (),
-        Err(e) => panic!("Error reading config file: {}", e),
-    };
-
-    let config: Config = match serde_yaml::from_str(&contents) {
-        Ok(config) => config,
-        Err(e) => panic!("Error parsing config file: {}", e),
-    };
-
-    let configured_root_path = if &config.root == "." || &config.root == "" {
+    let configured_root_path = if &config.root == "." || config.root.is_empty() {
         std::env::current_dir().unwrap()
     } else {
         Path::new(&config.root).to_path_buf()
