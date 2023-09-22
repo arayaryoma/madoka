@@ -15,7 +15,6 @@ pub struct Config {
     pub hosts: Vec<Host>,
 }
 
-// test
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -28,7 +27,7 @@ mod tests {
         assert_eq!(config.hosts.len(), 2);
         assert_eq!(config.hosts[0].host_name, "madoka.local");
         assert_eq!(config.hosts[0].root, ".");
-        assert_eq!( config.hosts[1].host_name, "blog.madoka.local");
+        assert_eq!(config.hosts[1].host_name, "blog.madoka.local");
         assert_eq!(config.hosts[1].root, "./blog.madoka.local");
     }
 }
