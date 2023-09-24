@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::Read;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use bytes::Bytes;
 use clap::Parser;
@@ -17,7 +18,7 @@ mod hyper_response_util;
 use hyper_response_util::not_found;
 
 mod config;
-use config::read_config_from_file;
+use config::{read_config_from_file, Config};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -33,27 +34,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
 
     let config = read_config_from_file(config_path.as_str())?;
-
-    let configured_root_path = if &config.root == "." || config.root.is_empty() {
-        std::env::current_dir().unwrap()
-    } else {
-        Path::new(&config.root).to_path_buf()
-    };
-
-    let port = config.port;
+    let port = config.port.clone();
+    let config_arc = Arc::new(config);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on port {}", port);
     loop {
+        let config_arc = Arc::clone(&config_arc);
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
-        let root_path = configured_root_path.clone();
         let service = service_fn(move |req| {
-            let root_path = root_path.clone();
-            async move { router(req, &root_path).await }
+            let config_arc = Arc::clone(&config_arc);
+            async move { router(req, &Arc::clone(&config_arc)).await }
         });
+
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new().serve_connection(io, service).await {
                 eprintln!("Failed to serve connection: {}", err);
@@ -63,16 +59,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 async fn router(
     req: hyper::Request<hyper::body::Incoming>,
-    root_path: &Path,
+    config: &Arc<Config>,
 ) -> hyper::Result<hyper::Response<Full<Bytes>>> {
     let method = req.method();
+    let host_header_value = req.headers().get("host").unwrap().to_str().unwrap();
+
+    let uri = host_header_value.parse::<hyper::Uri>().unwrap();
+    let req_host = uri.host().unwrap().to_string();
+    let hosts = &config.hosts;
+    let root_path_str = hosts
+        .into_iter()
+        .find(|host| host.host_name == req_host)
+        .unwrap()
+        .root
+        .clone();
+    let root_path = Path::new(&root_path_str);
+
     let mut path_str = req.uri().path();
     if path_str == "/" {
         path_str = "index.html";
     }
     let path = Path::new(path_str);
 
-    let full_path = resolve_file_path(root_path, path);
+    let full_path = resolve_file_path(&root_path, path);
 
     match method {
         &Method::GET => simple_file_send(full_path.as_path()).await,
