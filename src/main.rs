@@ -18,7 +18,7 @@ mod hyper_response_util;
 use hyper_response_util::not_found;
 
 mod config;
-use config::{read_config_from_file, Config};
+use config::{read_config_from_file, Config, ConfigHeaders};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -67,13 +67,14 @@ async fn router(
     let uri = host_header_value.parse::<hyper::Uri>().unwrap();
     let req_host = uri.host().unwrap().to_string();
     let hosts = &config.hosts;
-    let root_path_str = hosts
+    let target_host = hosts
         .into_iter()
         .find(|host| host.host_name == req_host)
-        .unwrap()
-        .root
-        .clone();
+        .unwrap();
+    let root_path_str = target_host.root.clone();
     let root_path = Path::new(&root_path_str);
+
+    let appended_headers: Option<ConfigHeaders> = target_host.add_header.clone();
 
     let mut path_str = req.uri().path();
     if path_str == "/" {
@@ -84,12 +85,15 @@ async fn router(
     let full_path = resolve_file_path(&root_path, path);
 
     match method {
-        &Method::GET => simple_file_send(full_path.as_path()).await,
+        &Method::GET => simple_file_send(full_path.as_path(), appended_headers).await,
         _ => Ok(not_found()),
     }
 }
 
-async fn simple_file_send(file_path: &Path) -> hyper::Result<hyper::Response<Full<Bytes>>> {
+async fn simple_file_send(
+    file_path: &Path,
+    res_headers: Option<ConfigHeaders>,
+) -> hyper::Result<hyper::Response<Full<Bytes>>> {
     let file_data = match resolve_file_data(file_path).await {
         Ok(file_data) => file_data,
         Err(e) => {
@@ -98,14 +102,20 @@ async fn simple_file_send(file_path: &Path) -> hyper::Result<hyper::Response<Ful
         }
     };
 
-    let builder = Response::builder()
+    let mut builder = Response::builder()
         .header("content-type", file_data.mime_type)
         .header("content-length", file_data.content_length)
-        .status(StatusCode::OK)
+        .status(StatusCode::OK);
+
+    if let Some(headers) = res_headers {
+        builder = set_headers_to_builder(builder, headers);
+    }
+
+    let res = builder
         .body(Full::new(Bytes::from(file_data.content)))
         .unwrap();
 
-    Ok(builder)
+    Ok(res)
 }
 
 struct ResolvedFileData {
@@ -141,4 +151,17 @@ fn resolve_file_path(root_path: &Path, relative_path: &Path) -> PathBuf {
     }
     debug!("full_path after modify: {}", full_path.display());
     full_path
+}
+
+fn set_headers_to_builder(
+    builder: hyper::http::response::Builder,
+    headers: ConfigHeaders,
+) -> hyper::http::response::Builder {
+    let mut builder = builder;
+    for header in headers {
+        for (key, value) in header {
+            builder = builder.header(key, value);
+        }
+    }
+    builder
 }

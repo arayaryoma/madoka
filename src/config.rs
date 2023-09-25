@@ -2,6 +2,8 @@ use std::{collections::HashMap, error::Error, fs::File, io::Read};
 
 use serde::Deserialize;
 
+pub type ConfigHeaders = Vec<HashMap<String, String>>;
+
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Host {
     pub host_name: String,
