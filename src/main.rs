@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
 
     let config = read_config_from_file(config_path.as_str())?;
-    let port = config.port.clone();
+    let port = config.port;
     let config_arc = Arc::new(config);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
@@ -68,7 +68,7 @@ async fn router(
     let req_host = uri.host().unwrap().to_string();
     let hosts = &config.hosts;
     let target_host = hosts
-        .into_iter()
+        .iter()
         .find(|host| host.host_name == req_host)
         .unwrap();
     let root_path_str = target_host.root.clone();
@@ -82,7 +82,7 @@ async fn router(
     }
     let path = Path::new(path_str);
 
-    let full_path = resolve_file_path(&root_path, path);
+    let full_path = resolve_file_path(root_path, path);
 
     match method {
         &Method::GET => simple_file_send(full_path.as_path(), appended_headers).await,
