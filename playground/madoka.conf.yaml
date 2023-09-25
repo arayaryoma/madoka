@@ -3,5 +3,10 @@ root: .
 hosts:
   - host_name: madoka.local
     root: .
+    add_header:
+      - madoka-debug: "1"
   - host_name: blog.madoka.local
     root: ./blog.madoka.local
+    add_header:
+      - origin-trial: "aaaaaaa"
+      - origin-trial: "bbbbbbb"

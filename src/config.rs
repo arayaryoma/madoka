@@ -1,14 +1,15 @@
-use std::{error::Error, fs::File, io::Read};
+use std::{collections::HashMap, error::Error, fs::File, io::Read};
 
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Host {
     pub host_name: String,
     pub root: String,
+    pub add_header: Option<Vec<HashMap<String, String>>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Config {
     pub port: u16,
     pub root: String,
@@ -21,14 +22,30 @@ mod tests {
 
     #[test]
     fn test_read_config_from_file() {
+        let expected_config = Config {
+            port: 3000,
+            root: ".".to_string(),
+            hosts: vec![
+                Host {
+                    host_name: "madoka.local".to_string(),
+                    root: ".".to_string(),
+                    add_header: Some(vec![HashMap::from([(
+                        "madoka-debug".to_string(),
+                        "1".to_string(),
+                    )])]),
+                },
+                Host {
+                    host_name: "blog.madoka.local".to_string(),
+                    root: "./blog.madoka.local".to_string(),
+                    add_header: Some(vec![
+                        HashMap::from([("origin-trial".to_string(), "aaaaaaa".to_string())]),
+                        HashMap::from([("origin-trial".to_string(), "bbbbbbb".to_string())]),
+                    ]),
+                },
+            ],
+        };
         let config = read_config_from_file("playground/madoka.conf.yaml").unwrap();
-        assert_eq!(config.port, 3000);
-        assert_eq!(config.root, ".");
-        assert_eq!(config.hosts.len(), 2);
-        assert_eq!(config.hosts[0].host_name, "madoka.local");
-        assert_eq!(config.hosts[0].root, ".");
-        assert_eq!(config.hosts[1].host_name, "blog.madoka.local");
-        assert_eq!(config.hosts[1].root, "./blog.madoka.local");
+        assert_eq!(config, expected_config);
     }
 }
 
