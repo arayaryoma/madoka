@@ -9,4 +9,6 @@ FROM debian:buster-slim
 RUN apt-get update && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/cargo/bin/madoka /usr/local/bin/madoka
 
+WORKDIR /usr/src/app/playground
+
 CMD ["madoka"]
