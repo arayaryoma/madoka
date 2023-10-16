@@ -38,3 +38,10 @@ services:
       - K6_OUT=influxdb=http://influxdb:8086/k6
     volumes:
       - ./load_testing/scripts:/scripts
+
+  app:
+    build: .
+    networks:
+      - k6
+    ports:
+      - "3000:3000"
