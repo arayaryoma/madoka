@@ -26,6 +26,7 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_BASIC_ENABLED=false
     volumes:
+      - ./dashboards:/var/lib/grafana/dashboards
       - ./grafana:/etc/grafana/provisioning/
 
   k6:
