@@ -25,7 +25,7 @@ mod tests {
     #[test]
     fn test_read_config_from_file() {
         let expected_config = Config {
-            port: 3000,
+            port: 3001,
             root: ".".to_string(),
             hosts: vec![
                 Host {
