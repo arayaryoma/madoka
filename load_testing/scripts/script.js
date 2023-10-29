@@ -20,6 +20,6 @@ export default function () {
       host: "madoka.local",
     },
   };
-  let res = http.get("http://app:3001/");
+  let res = http.get("http://app:3001/", params);
   check(res, { "status is 200": (r) => r.status === 200 });
 }
