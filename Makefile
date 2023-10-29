@@ -14,9 +14,9 @@ install: build_release
 	cp target/debug/madoka /usr/local/bin/madoka
 
 .PHONY: install_debug
-install_debug: build_debug
+install_debug:
 	@echo "Installing with debug build..."
-	cp target/debug/madoka /usr/local/bin/madoka
+	cargo install --debug --path .
 
 
 lint:
