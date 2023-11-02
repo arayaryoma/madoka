@@ -149,7 +149,6 @@ fn resolve_file_path(root_path: &Path, relative_path: &Path) -> PathBuf {
     if full_path.is_dir() {
         full_path.push("index.html");
     }
-    debug!("full_path after modify: {}", full_path.display());
     full_path
 }
 
