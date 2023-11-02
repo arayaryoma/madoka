@@ -46,3 +46,14 @@ services:
       - k6
     ports:
       - "3001:3001"
+
+  nginx_app:
+    image: nginx:latest
+    networks:
+      - k6
+    ports:
+      - "3002:80"
+    volumes:
+      - ./playground:/usr/share/nginx/html
+      - ./playground/nginx.conf:/etc/nginx/nginx.conf
+      - .tmp/nginx-access-log.log:/var/log/nginx/access.log
