@@ -19,4 +19,8 @@ mime_guess = "2.0.4"
 log = "0.4.20"
 env_logger = "0.10.0"
 tokio-rustls = "0.24.1"
-rustls-pemfile = "1.0.3"
+rustls-pemfile = "=2.0.0-alpha.1"
+webpki = { package = "rustls-webpki", version = "=0.102.0-alpha.3", features = [
+	"alloc",
+	"std",
+] }

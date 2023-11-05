@@ -38,6 +38,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port = config.port;
     let config_arc = Arc::new(config);
 
+    let cert_path_string = config_arc.tls_cert.clone().unwrap();
+    let cert_path = Path::new(&cert_path_string);
+
+    let cert_key_path_string = config_arc.tls_cert_key.clone().unwrap();
+    let cert_key_path = Path::new(&cert_key_path_string);
+
+    let certs = tls::load_certs(cert_path);
+
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     let listener = TcpListener::bind(addr).await?;
