@@ -16,6 +16,8 @@ pub struct Config {
     pub port: u16,
     pub root: String,
     pub hosts: Vec<Host>,
+    pub tls_cert: Option<String>,
+    pub tls_cert_key: Option<String>,
 }
 
 #[cfg(test)]
@@ -27,6 +29,8 @@ mod tests {
         let expected_config = Config {
             port: 3001,
             root: ".".to_string(),
+            tls_cert: Some("./madoka.local.pem".to_string()),
+            tls_cert_key: Some("./madoka.local-key.pem".to_string()),
             hosts: vec![
                 Host {
                     host_name: "madoka.local".to_string(),

@@ -1,5 +1,7 @@
 port: 3001
 root: .
+tls_cert: ./madoka.local.pem
+tls_cert_key: ./madoka.local-key.pem
 hosts:
   - host_name: madoka.local
     root: .
