@@ -6,6 +6,7 @@ Madoka is a small static-file web server written in Rust (hyper 1.0-rc + tokio).
 
 - Build: `cargo build` (or `make build_debug` / `make build_release`)
 - Lint: `make lint` (runs `cargo clippy -- -D warnings`; CI fails on any warning)
+- Format check: `make format_check` (runs `cargo fmt --all -- --check`; enforced in CI)
 - Test all: `cargo test`
 - Test one: `cargo test <test_name>` (e.g. `cargo test test_read_config_from_file`)
 - Run locally: `cargo run -- --config playground/madoka.conf.yaml` — note the sample config's `root` paths are relative to the CWD, so run from `playground/` or adjust paths
