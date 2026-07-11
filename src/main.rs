@@ -11,7 +11,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Response, StatusCode};
 use hyper_util::rt::TokioIo;
-use log::{debug, error};
+use log::error;
 use tokio::net::TcpListener;
 
 mod hyper_response_util;
