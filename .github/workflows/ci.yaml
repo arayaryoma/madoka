@@ -14,8 +14,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: setup clippy
-        run: rustup component add clippy
+      - name: setup clippy and rustfmt
+        run: rustup component add clippy rustfmt
+      - name: Format check
+        run: make format_check
       - name: Lint
         run: make lint
       - name: Build

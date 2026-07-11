@@ -22,3 +22,8 @@ install_debug:
 lint:
 	@echo "Linting..."
 	cargo clippy -- -D warnings
+
+.PHONY: format_check
+format_check:
+	@echo "Checking format..."
+	cargo fmt --all -- --check
